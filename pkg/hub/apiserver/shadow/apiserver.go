@@ -189,6 +189,8 @@ func (ss *ShadowAPIServer) InstallShadowAPIGroups(stopCh <-chan struct{}, cl dis
 			resourceRest.SetGroup(apiGroupResource.Group.Name)
 			resourceRest.SetVersion(preferredVersion)
 			switch {
+			case strings.HasSuffix(apiresource.Name, "/status"):
+				shadowv1alpha1storage[apiresource.Name] = template.NewStatusREST(resourceRest)
 			case strings.HasSuffix(apiresource.Name, "/scale"):
 				shadowv1alpha1storage[apiresource.Name] = template.NewScaleREST(resourceRest)
 			default:
