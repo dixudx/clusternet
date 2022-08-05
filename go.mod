@@ -120,10 +120,10 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.28.0 // indirect
-	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/prometheus/common v0.32.1 // indirect
+	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20210614095031-55d5740dbbcc // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
@@ -182,9 +182,7 @@ require (
 )
 
 replace (
-	github.com/dgrijalva/jwt-go => github.com/dgrijalva/jwt-go v3.2.1-0.20210802184156-9742bd7fca1c+incompatible
 	github.com/opencontainers/image-spec => github.com/opencontainers/image-spec v1.0.2
-	github.com/spf13/afero => github.com/spf13/afero v1.5.1
 	helm.sh/helm/v3 => github.com/clusternet/helm/v3 v3.8.1-0.20220302083614-dcaa0a1d8a20
 	k8s.io/apimachinery => github.com/clusternet/apimachinery v0.23.0-alpha.0.0.20220224022903-dc3dec363e8c
 	k8s.io/apiserver => github.com/clusternet/apiserver v0.0.0-20220224032722-ac3d780b913f

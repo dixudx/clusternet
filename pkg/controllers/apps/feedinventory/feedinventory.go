@@ -80,7 +80,7 @@ func NewController(clusternetClient clusternetclientset.Interface,
 	recorder record.EventRecorder, registry Registry, reservedNamespace string) (*Controller, error) {
 	c := &Controller{
 		clusternetClient:  clusternetClient,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "feedInventory"),
+		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "FeedInventory"),
 		subLister:         subsInformer.Lister(),
 		subSynced:         subsInformer.Informer().HasSynced,
 		finvLister:        finvInformer.Lister(),
