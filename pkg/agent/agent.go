@@ -39,8 +39,8 @@ import (
 	"k8s.io/klog/v2"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 	utilpointer "k8s.io/utils/pointer"
-	mcsclientset "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
-	mcsInformers "sigs.k8s.io/mcs-api/pkg/client/informers/externalversions"
+	//mcsclientset "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
+	//mcsInformers "sigs.k8s.io/mcs-api/pkg/client/informers/externalversions"
 
 	"github.com/clusternet/clusternet/pkg/agent/deployer"
 	clusterapi "github.com/clusternet/clusternet/pkg/apis/clusters/v1beta1"
@@ -118,7 +118,7 @@ func NewAgent(registrationOpts *ClusterRegistrationOptions, controllerOpts *util
 		ClientConfig: childKubeConfig,
 	}
 	childKubeClientSet := kubernetes.NewForConfigOrDie(clientBuilder.ConfigOrDie("clusternet-agent-kube-client"))
-	mcsClientSet := mcsclientset.NewForConfigOrDie(clientBuilder.ConfigOrDie("clusternet-agent-mcs-client"))
+	//mcsClientSet := mcsclientset.NewForConfigOrDie(clientBuilder.ConfigOrDie("clusternet-agent-mcs-client"))
 	var electionClientSet *kubernetes.Clientset
 	if controllerOpts.LeaderElection.LeaderElect {
 		electionClientSet = kubernetes.NewForConfigOrDie(clientBuilder.ConfigOrDie("clusternet-agent-election-client"))
@@ -129,18 +129,18 @@ func NewAgent(registrationOpts *ClusterRegistrationOptions, controllerOpts *util
 
 	// creates the informer factory
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(childKubeClientSet, known.DefaultResync)
-	mcsInformerFactory := mcsInformers.NewSharedInformerFactory(mcsClientSet, known.DefaultResync)
+	//mcsInformerFactory := mcsInformers.NewSharedInformerFactory(mcsClientSet, known.DefaultResync)
 
-	var p *predictor.Server
-	if registrationOpts.serveInternalPredictor {
-		// predictorAddr is in the form "host:port"
-		predictorAddr := strings.TrimLeft(registrationOpts.PredictorAddress, "http://")
-		predictorAddr = strings.TrimLeft(predictorAddr, "https://")
-		p, err = predictor.NewServer(childKubeConfig, childKubeClientSet, kubeInformerFactory, predictorAddr)
-		if err != nil {
-			return nil, err
-		}
-	}
+	//var p *predictor.Server
+	//if registrationOpts.serveInternalPredictor {
+	//	// predictorAddr is in the form "host:port"
+	//	predictorAddr := strings.TrimLeft(registrationOpts.PredictorAddress, "http://")
+	//	predictorAddr = strings.TrimLeft(predictorAddr, "https://")
+	//	p, err = predictor.NewServer(childKubeConfig, childKubeClientSet, kubeInformerFactory, predictorAddr)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	agent := &Agent{
 		Identity:               identity,
@@ -156,12 +156,12 @@ func NewAgent(registrationOpts *ClusterRegistrationOptions, controllerOpts *util
 			metricClient,
 			kubeInformerFactory,
 		),
-		deployer: deployer.NewDeployer(
-			registrationOpts.ClusterSyncMode,
-			childKubeConfig.Host,
-			controllerOpts.LeaderElection.ResourceNamespace),
-		predictor:    p,
-		seController: mcs.NewSeController(kubeInformerFactory.Discovery().V1().EndpointSlices(), mcsClientSet, mcsInformerFactory),
+		//deployer: deployer.NewDeployer(
+		//	registrationOpts.ClusterSyncMode,
+		//	childKubeConfig.Host,
+		//	controllerOpts.LeaderElection.ResourceNamespace),
+		//predictor:    p,
+		//seController: mcs.NewSeController(kubeInformerFactory.Discovery().V1().EndpointSlices(), mcsClientSet, mcsInformerFactory),
 	}
 	return agent, nil
 }
@@ -233,28 +233,28 @@ func (agent *Agent) run(ctx context.Context) {
 		agent.statusManager.Run(ctx, agent.parentDedicatedKubeConfig, agent.DedicatedNamespace, agent.ClusterID)
 	}, time.Duration(0))
 
-	go wait.UntilWithContext(ctx, func(ctx context.Context) {
-		if err := agent.deployer.Run(ctx,
-			agent.parentDedicatedKubeConfig,
-			agent.childKubeClientSet,
-			agent.DedicatedNamespace,
-			agent.ClusterID,
-			defaultThreadiness); err != nil {
-			klog.Error(err)
-		}
-	}, time.Duration(0))
+	//go wait.UntilWithContext(ctx, func(ctx context.Context) {
+	//	if err := agent.deployer.Run(ctx,
+	//		agent.parentDedicatedKubeConfig,
+	//		agent.childKubeClientSet,
+	//		agent.DedicatedNamespace,
+	//		agent.ClusterID,
+	//		defaultThreadiness); err != nil {
+	//		klog.Error(err)
+	//	}
+	//}, time.Duration(0))
 
-	go wait.UntilWithContext(ctx, func(ctx context.Context) {
-		if err := agent.seController.Run(ctx, agent.parentDedicatedKubeConfig, *agent.DedicatedNamespace); err != nil {
-			klog.Error(err)
-		}
-	}, time.Duration(0))
-
-	if agent.predictor != nil {
-		go wait.UntilWithContext(ctx, func(ctx context.Context) {
-			agent.predictor.Run(ctx)
-		}, time.Duration(0))
-	}
+	//go wait.UntilWithContext(ctx, func(ctx context.Context) {
+	//	if err := agent.seController.Run(ctx, agent.parentDedicatedKubeConfig, *agent.DedicatedNamespace); err != nil {
+	//		klog.Error(err)
+	//	}
+	//}, time.Duration(0))
+	//
+	//if agent.predictor != nil {
+	//	go wait.UntilWithContext(ctx, func(ctx context.Context) {
+	//		agent.predictor.Run(ctx)
+	//	}, time.Duration(0))
+	//}
 	<-ctx.Done()
 }
 
