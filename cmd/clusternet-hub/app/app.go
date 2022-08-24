@@ -21,7 +21,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/klog/v2"
 
 	_ "github.com/clusternet/clusternet/pkg/features"
@@ -77,7 +76,6 @@ func NewClusternetHubCmd(ctx context.Context) *cobra.Command {
 	flags := cmd.Flags()
 	version.AddVersionFlag(flags)
 	opts.AddFlags(flags)
-	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 
 	return cmd
 }

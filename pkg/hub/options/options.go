@@ -72,7 +72,8 @@ type HubServerOptions struct {
 	// default to be 10
 	Threadiness int
 
-	RecommendedOptions *genericoptions.RecommendedOptions
+	RecommendedOptions      *genericoptions.RecommendedOptions
+	GenericServerRunOptions *genericoptions.ServerRunOptions
 
 	LoopbackSharedInformerFactory informers.SharedInformerFactory
 
@@ -97,13 +98,14 @@ func NewHubServerOptions() (*HubServerOptions, error) {
 	controllerOpts.ClientConnection.Burst = int32(rest.DefaultBurst * 10)
 
 	return &HubServerOptions{
-		RecommendedOptions:     genericoptions.NewRecommendedOptions("fake", nil),
-		AnonymousAuthSupported: true,
-		ReservedNamespace:      known.ClusternetReservedNamespace,
-		Threadiness:            known.DefaultThreadiness,
-		ControllerOptions:      controllerOpts,
-		PeerPort:               8123,
-		PeerToken:              "Cheugy",
+		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
+		RecommendedOptions:      genericoptions.NewRecommendedOptions("fake", nil),
+		AnonymousAuthSupported:  true,
+		ReservedNamespace:       known.ClusternetReservedNamespace,
+		Threadiness:             known.DefaultThreadiness,
+		ControllerOptions:       controllerOpts,
+		PeerPort:                8123,
+		PeerToken:               "Cheugy",
 	}, nil
 }
 
@@ -180,6 +182,7 @@ func (o *HubServerOptions) Config() (*apiserver.Config, error) {
 }
 
 func (o *HubServerOptions) AddFlags(fs *pflag.FlagSet) {
+	o.GenericServerRunOptions.AddUniversalFlags(fs)
 	o.addRecommendedOptionsFlags(fs)
 	o.ControllerOptions.AddFlags(fs)
 
@@ -226,6 +229,8 @@ func (o *HubServerOptions) validateRecommendedOptions() []error {
 func (o *HubServerOptions) recommendedOptionsApplyTo(config *genericapiserver.RecommendedConfig) error {
 	// Copied from k8s.io/apiserver/pkg/server/options/recommended.go
 	// and remove unused ApplyTo
+
+	o.GenericServerRunOptions.ApplyTo(&config.Config)
 
 	if err := o.RecommendedOptions.SecureServing.ApplyTo(&config.Config.SecureServing, &config.Config.LoopbackClientConfig); err != nil {
 		return err
