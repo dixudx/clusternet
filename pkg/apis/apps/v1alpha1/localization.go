@@ -95,6 +95,10 @@ const (
 
 	// StrategicMergePatchType won't be supported, since `patchStrategy`
 	// and `patchMergeKey` can not be retrieved.
+
+	// KyvernoPatchType applies a kyverno style patch for all matched objects.
+	// Note: KyvernoPatchType does not work with HelmChart(s).
+	KyvernoPatchType OverrideType = "KyvernoPatch"
 )
 
 // OverrideConfig holds information that describes a override config.

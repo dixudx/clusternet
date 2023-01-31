@@ -23,6 +23,8 @@ import (
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/kyverno/kyverno/pkg/engine/mutate"
+	jsonutils "github.com/kyverno/kyverno/pkg/utils/json"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
 
@@ -83,6 +85,16 @@ func applyOverrides(genericOriginal []byte, chartOriginal []byte, overrides []ap
 			}
 		case appsapi.MergePatchType:
 			genericResult, err = jsonpatch.MergePatch(genericResult, overrideBytes)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to apply OverrideConfig %s: %v", overrideConfig.Name, err)
+			}
+		case appsapi.KyvernoPatchType:
+			patches, err := mutate.Mutate(genericResult, overrideConfig.Name, overrideConfig.KyvernoConfig)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to apply OverrideConfig %s: %v", overrideConfig.Name, err)
+			}
+			joinedPatch := jsonutils.JoinPatches(patches...)
+			genericResult, err = applyJSONPatch(genericResult, joinedPatch)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to apply OverrideConfig %s: %v", overrideConfig.Name, err)
 			}
