@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/kyverno/kyverno/pkg/engine/mutate"
 	jsonutils "github.com/kyverno/kyverno/pkg/utils/json"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
@@ -44,7 +43,7 @@ func applyOverrides(genericOriginal []byte, chartOriginal []byte, overrides []ap
 	genericResult, chartResult := genericOriginal, chartOriginal
 	for _, overrideConfig := range overrides {
 		// validates override value first
-		if len(strings.TrimSpace(overrideConfig.Value)) == 0 {
+		if len(strings.TrimSpace(overrideConfig.Value)) == 0 && overrideConfig.Type != appsapi.KyvernoPatchType {
 			continue
 		}
 		overrideBytes, err := yaml.YAMLToJSON([]byte(overrideConfig.Value))
@@ -89,7 +88,7 @@ func applyOverrides(genericOriginal []byte, chartOriginal []byte, overrides []ap
 				return nil, nil, fmt.Errorf("failed to apply OverrideConfig %s: %v", overrideConfig.Name, err)
 			}
 		case appsapi.KyvernoPatchType:
-			patches, err := mutate.Mutate(genericResult, overrideConfig.Name, overrideConfig.KyvernoConfig)
+			patches, err := KyvernoMutate(genericResult, overrideConfig.Name, overrideConfig.KyvernoConfig)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to apply OverrideConfig %s: %v", overrideConfig.Name, err)
 			}
