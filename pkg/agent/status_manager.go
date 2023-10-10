@@ -104,7 +104,7 @@ func (mgr *Manager) Run(ctx context.Context, parentDedicatedKubeConfig *rest.Con
 			os.Exit(1)
 			return
 		}
-		mgr.updateClusterStatus(ctx, *dedicatedNamespace, string(*clusterID), client, retry.DefaultBackoff)
+		mgr.updateClusterStatus(ctx, *dedicatedNamespace, string(*clusterID), client, retry.DefaultRetry)
 	}, mgr.statusReportFrequency.Duration)
 }
 

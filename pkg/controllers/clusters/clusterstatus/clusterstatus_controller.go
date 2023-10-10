@@ -86,6 +86,7 @@ func NewController(
 		kubeClient:              kubeClient,
 		metricClientset:         metricClient,
 		lock:                    &sync.Mutex{},
+		clusterStatus:           new(clusterapi.ManagedClusterStatus),
 		collectingPeriod:        collectingPeriod,
 		heartbeatFrequency:      heartbeatFrequency,
 		apiserverURL:            apiserverURL,
@@ -167,7 +168,11 @@ func (c *Controller) collectingClusterStatus(ctx context.Context) {
 	}
 
 	status.HeartbeatFrequencySeconds = utilpointer.Int64(int64(c.heartbeatFrequency.Seconds()))
-	status.Conditions = []metav1.Condition{c.getCondition(status)}
+
+	// update conditions
+	curStatusCopy := c.clusterStatus.DeepCopy()
+	utils.UpdateConditions(curStatusCopy, []metav1.Condition{c.getCondition(status)})
+	status.Conditions = curStatusCopy.Conditions
 
 	status.KubeQPS = c.kubeQPS
 	status.KubeBurst = c.kubeBurst
@@ -182,10 +187,6 @@ func (c *Controller) collectingClusterStatus(ctx context.Context) {
 func (c *Controller) setClusterStatus(status clusterapi.ManagedClusterStatus) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if c.clusterStatus == nil {
-		c.clusterStatus = new(clusterapi.ManagedClusterStatus)
-	}
 
 	c.clusterStatus = &status
 	c.clusterStatus.LastObservedTime = metav1.Now()

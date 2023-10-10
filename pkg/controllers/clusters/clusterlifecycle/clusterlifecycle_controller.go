@@ -38,6 +38,7 @@ import (
 	clusternetclientset "github.com/clusternet/clusternet/pkg/generated/clientset/versioned"
 	clusterinformers "github.com/clusternet/clusternet/pkg/generated/informers/externalversions/clusters/v1beta1"
 	"github.com/clusternet/clusternet/pkg/known"
+	"github.com/clusternet/clusternet/pkg/utils"
 	taintutils "github.com/clusternet/clusternet/pkg/utils/taints"
 )
 
@@ -73,8 +74,11 @@ type Controller struct {
 	clusterInformer  clusterinformers.ManagedClusterInformer
 }
 
-func NewController(clusternetClient clusternetclientset.Interface,
-	clusterInformer clusterinformers.ManagedClusterInformer, recorder record.EventRecorder) (*Controller, error) {
+func NewController(
+	clusternetClient clusternetclientset.Interface,
+	clusterInformer clusterinformers.ManagedClusterInformer,
+	recorder record.EventRecorder,
+) (*Controller, error) {
 	c := &Controller{
 		clusternetClient: clusternetClient,
 		recorder:         recorder,
@@ -91,6 +95,7 @@ func NewController(clusternetClient clusternetclientset.Interface,
 				if newMcls.DeletionTimestamp != nil {
 					return true, nil
 				}
+
 				// Decide whether discovery has reported a status change.
 				if equality.Semantic.DeepEqual(oldMcls.Status, newMcls.Status) {
 					klog.V(4).Infof("no updates on the status of ManagedCluster %s, skipping syncing", klog.KObj(oldMcls))
@@ -146,7 +151,7 @@ func (c *Controller) handle(key interface{}) (requeueAfter *time.Duration, err e
 		return nil, nil
 	}
 
-	updatedMcls, err := c.updateClusterCondition(context.TODO(), mcls.DeepCopy())
+	updatedMcls, err := c.updateClusterConditions(context.TODO(), mcls.DeepCopy())
 	if err != nil {
 		msg := fmt.Sprintf("failed to update conditions of ManagedCluster status: %v", err)
 		klog.WarningDepth(2, msg)
@@ -164,22 +169,25 @@ func (c *Controller) handle(key interface{}) (requeueAfter *time.Duration, err e
 	return getClusterMonitorGracePeriod(mcls.Status), nil
 }
 
-func (c *Controller) updateClusterCondition(ctx context.Context, cluster *clusterapi.ManagedCluster) (*clusterapi.ManagedCluster, error) {
-	currentReadyCondition := GetClusterCondition(&cluster.Status, clusterapi.ClusterReady)
+func (c *Controller) updateClusterConditions(ctx context.Context, cluster *clusterapi.ManagedCluster) (*clusterapi.ManagedCluster, error) {
+	var newConditions []metav1.Condition
 	observedReadyCondition := generateClusterReadyCondition(cluster)
-	if observedReadyCondition == nil || equality.Semantic.DeepEqual(currentReadyCondition, observedReadyCondition) {
+	if observedReadyCondition != nil {
+		newConditions = append(newConditions, *observedReadyCondition)
+
+		// update Readyz/Livez/Healthz to false when cluster status is not ready
+		if observedReadyCondition.Status != metav1.ConditionTrue {
+			cluster.Status.Readyz = false
+			cluster.Status.Livez = false
+			cluster.Status.Healthz = false
+		}
+	}
+
+	hasChanged := utils.UpdateConditions(&cluster.Status, newConditions)
+	if !hasChanged {
 		return cluster, nil
 	}
 
-	// update Readyz,Livez,Healthz to false when cluster status is not ready
-	if observedReadyCondition.Status != metav1.ConditionTrue {
-		cluster.Status.Readyz = false
-		cluster.Status.Livez = false
-		cluster.Status.Healthz = false
-	}
-
-	// TODO: multiple cluster conditions
-	cluster.Status.Conditions = []metav1.Condition{*observedReadyCondition}
 	return c.clusternetClient.ClustersV1beta1().ManagedClusters(cluster.Namespace).UpdateStatus(ctx,
 		cluster, metav1.UpdateOptions{})
 }
@@ -192,6 +200,7 @@ func (c *Controller) updateClusterTaints(ctx context.Context, cluster *clusterap
 			if taintKey, found2 := taintMap[condition.Status]; found2 {
 				taints = append(taints, corev1.Taint{
 					Key:    taintKey,
+					Value:  condition.Reason,
 					Effect: corev1.TaintEffectNoSchedule,
 				})
 			}
@@ -239,8 +248,12 @@ func patchClusterTaints(ctx context.Context, client clusternetclientset.Interfac
 		}
 	}
 
+	return patchCluster(ctx, client, cluster, newCluster)
+}
+
+func patchCluster(ctx context.Context, client clusternetclientset.Interface, oldCluster, newCluster *clusterapi.ManagedCluster) error {
 	// patch ManagedCluster
-	oldData, err := json.Marshal(cluster)
+	oldData, err := json.Marshal(oldCluster)
 	if err != nil {
 		return err
 	}
@@ -255,7 +268,7 @@ func patchClusterTaints(ctx context.Context, client clusternetclientset.Interfac
 	if len(patchBytes) == 0 {
 		return nil
 	}
-	_, err = client.ClustersV1beta1().ManagedClusters(cluster.Namespace).Patch(ctx, cluster.Name, types.MergePatchType,
+	_, err = client.ClustersV1beta1().ManagedClusters(oldCluster.Namespace).Patch(ctx, oldCluster.Name, types.MergePatchType,
 		patchBytes, metav1.PatchOptions{})
 	return err
 }
@@ -292,19 +305,6 @@ func generateClusterReadyCondition(cluster *clusterapi.ManagedCluster) *metav1.C
 		Reason:             "ClusterStatusUnknown",
 		Message:            "Clusternet agent stopped posting cluster status.",
 	}
-}
-
-// GetClusterCondition extracts the provided condition from the given status and returns that.
-func GetClusterCondition(status *clusterapi.ManagedClusterStatus, conditionType string) *metav1.Condition {
-	if status == nil {
-		return nil
-	}
-	for i := range status.Conditions {
-		if status.Conditions[i].Type == conditionType {
-			return &status.Conditions[i]
-		}
-	}
-	return nil
 }
 
 // getClusterMonitorGracePeriod calculate grace period for cluster monitoring, use DefaultClusterMonitorGracePeriod if HeartbeatFrequencySeconds is undefined.
