@@ -125,7 +125,7 @@ func (deployer *Deployer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (deployer *Deployer) handleDescription(desc *appsapi.Description) error {
+func (deployer *Deployer) handleDescription(ctx context.Context, desc *appsapi.Description) error {
 	klog.V(5).Infof("handle Description %s", klog.KObj(desc))
 	if desc.Spec.Deployer != appsapi.DescriptionGenericDeployer {
 		return nil
@@ -136,7 +136,7 @@ func (deployer *Deployer) handleDescription(desc *appsapi.Description) error {
 		if utils.IsClusterLost(desc.Labels[known.ClusterIDLabel], desc.Namespace, deployer.clusterLister) {
 			descCopy := desc.DeepCopy()
 			descCopy.Finalizers = utils.RemoveString(descCopy.Finalizers, known.AppFinalizer)
-			_, err := deployer.clusternetClient.AppsV1alpha1().Descriptions(descCopy.Namespace).Update(context.TODO(), descCopy, metav1.UpdateOptions{})
+			_, err := deployer.clusternetClient.AppsV1alpha1().Descriptions(descCopy.Namespace).Update(ctx, descCopy, metav1.UpdateOptions{})
 			return err
 		}
 	}
@@ -158,11 +158,11 @@ func (deployer *Deployer) handleDescription(desc *appsapi.Description) error {
 	}
 
 	if desc.DeletionTimestamp != nil {
-		return utils.OffloadDescription(context.TODO(), deployer.clusternetClient, dynamicClient,
+		return utils.OffloadDescription(ctx, deployer.clusternetClient, dynamicClient,
 			discoveryRESTMapper, desc, deployer.recorder)
 	}
 
-	return utils.ApplyDescription(context.TODO(), deployer.clusternetClient, dynamicClient,
+	return utils.ApplyDescription(ctx, deployer.clusternetClient, dynamicClient,
 		discoveryRESTMapper, desc, deployer.recorder, false, nil, false)
 }
 

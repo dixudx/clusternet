@@ -82,7 +82,7 @@ func NewController(
 			subsInformer.Informer().HasSynced,
 			descInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle)
+		WithHandlerContextFunc(c.handle)
 
 	yachtController.WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 		// we explicitly call yachtController.Enqueue to only enqueue Subscription
@@ -165,7 +165,7 @@ func (c *Controller) resolveControllerRef(name, namespace string, uid types.UID)
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.

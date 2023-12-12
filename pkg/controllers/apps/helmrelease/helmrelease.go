@@ -42,7 +42,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = appsapi.SchemeGroupVersion.WithKind("HelmRelease")
 
-type SyncHandlerFunc func(helmrelease *appsapi.HelmRelease) error
+type SyncHandlerFunc func(ctx context.Context, helmrelease *appsapi.HelmRelease) error
 
 // Controller is a controller that handles HelmRelease
 type Controller struct {
@@ -71,7 +71,7 @@ func NewController(
 		WithCacheSynced(
 			hrInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: spec changes
 			if oldObj != nil && newObj != nil {
@@ -114,7 +114,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the HelmRelease resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -160,7 +160,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	hr.Kind = controllerKind.Kind
 	hr.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(hr)
+	err = c.syncHandlerFunc(ctx, hr)
 	if err != nil {
 		c.recorder.Event(hr, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

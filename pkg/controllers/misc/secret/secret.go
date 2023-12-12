@@ -40,7 +40,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = corev1.SchemeGroupVersion.WithKind("Secret")
 
-type SyncHandlerFunc func(secret *corev1.Secret) error
+type SyncHandlerFunc func(ctx context.Context, secret *corev1.Secret) error
 
 // Controller is a controller that handles Secret
 // here we only focus on Secret "child-cluster-deployer" !!!
@@ -70,7 +70,7 @@ func NewController(
 		WithCacheSynced(
 			secretInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// here we only focus on Secret "child-cluster-deployer" !!!
 			return isChildClusterDeployerSecret(oldObj) || isChildClusterDeployerSecret(newObj), nil
@@ -97,7 +97,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Secret resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -126,8 +126,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 	secret := cachedSecret.DeepCopy()
 	if !utils.ContainsString(secret.Finalizers, known.AppFinalizer) && secret.DeletionTimestamp == nil {
 		secret.Finalizers = append(secret.Finalizers, known.AppFinalizer)
-		if secret, err = c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(context.TODO(),
-			secret, metav1.UpdateOptions{}); err != nil {
+		if secret, err = c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			msg := fmt.Sprintf("failed to inject finalizer %s to Secret %s: %v", known.AppFinalizer, klog.KObj(secret), err)
 			klog.WarningDepth(4, msg)
 			c.recorder.Event(secret, corev1.EventTypeWarning, "FailedInjectingFinalizer", msg)
@@ -140,7 +139,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	secret.Kind = controllerKind.Kind
 	secret.APIVersion = controllerKind.Version
-	err = c.syncHandler(secret)
+	err = c.syncHandler(ctx, secret)
 	if err != nil {
 		c.recorder.Event(secret, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

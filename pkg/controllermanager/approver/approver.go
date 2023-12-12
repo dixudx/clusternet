@@ -214,7 +214,7 @@ func (crrApprover *CRRApprover) defaultClusterRoles(clusterID types.UID) []rbacv
 	}
 }
 
-func (crrApprover *CRRApprover) handleClusterRegistrationRequests(crr *clusterapi.ClusterRegistrationRequest) error {
+func (crrApprover *CRRApprover) handleClusterRegistrationRequests(ctx context.Context, crr *clusterapi.ClusterRegistrationRequest) error {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -275,7 +275,7 @@ func (crrApprover *CRRApprover) handleClusterRegistrationRequests(crr *clusterap
 
 	// 5. get credentials
 	klog.V(5).Infof("get generated credentials for cluster %q (%q)", crr.Spec.ClusterID, crr.Spec.ClusterName)
-	secret, err := getCredentialsForChildCluster(context.TODO(), crrApprover.kubeclient, retry.DefaultBackoff, sa.Name, sa.Namespace, crrApprover.saTokenAutoGen)
+	secret, err := getCredentialsForChildCluster(ctx, crrApprover.kubeclient, retry.DefaultBackoff, sa.Name, sa.Namespace, crrApprover.saTokenAutoGen)
 	if err != nil {
 		return err
 	}

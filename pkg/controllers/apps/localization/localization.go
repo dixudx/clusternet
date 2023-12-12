@@ -46,7 +46,7 @@ var (
 	chartKind      = appsapi.SchemeGroupVersion.WithKind("HelmChart")
 )
 
-type SyncHandlerFunc func(loc *appsapi.Localization) error
+type SyncHandlerFunc func(ctx context.Context, loc *appsapi.Localization) error
 
 // Controller is a controller that handles Localization
 type Controller struct {
@@ -90,7 +90,7 @@ func NewController(
 			chartInformer.Informer().HasSynced,
 			manifestInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: spec and labels changes
 			if oldObj != nil && newObj != nil {
@@ -131,7 +131,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Localization resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// Convert the namespace/name string into a distinct namespace and name
 	key := obj.(string)
 	ns, name, err := cache.SplitMetaNamespaceKey(key)
@@ -156,8 +156,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 	// add finalizer
 	if !utils.ContainsString(loc.Finalizers, known.AppFinalizer) && loc.DeletionTimestamp == nil {
 		loc.Finalizers = append(loc.Finalizers, known.AppFinalizer)
-		loc, err = c.clusternetClient.AppsV1alpha1().Localizations(loc.Namespace).Update(context.TODO(),
-			loc, metav1.UpdateOptions{})
+		loc, err = c.clusternetClient.AppsV1alpha1().Localizations(loc.Namespace).Update(ctx, loc, metav1.UpdateOptions{})
 		if err != nil {
 			msg := fmt.Sprintf("failed to inject finalizer %s to Localization %s: %v",
 				known.AppFinalizer, klog.KObj(loc), err)
@@ -184,7 +183,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	loc.Kind = controllerKind.Kind
 	loc.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(loc)
+	err = c.syncHandlerFunc(ctx, loc)
 	if err != nil {
 		c.recorder.Event(loc, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

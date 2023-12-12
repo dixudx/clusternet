@@ -44,7 +44,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = appsapi.SchemeGroupVersion.WithKind("HelmChart")
 
-type SyncHandlerFunc func(chart *appsapi.HelmChart) error
+type SyncHandlerFunc func(ctx context.Context, chart *appsapi.HelmChart) error
 
 // Controller is a controller that handles HelmChart
 type Controller struct {
@@ -82,7 +82,7 @@ func NewController(
 			helmChartInformer.Informer().HasSynced,
 			baseInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: spec changes
 			if oldObj != nil && newObj != nil {
@@ -154,7 +154,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the HelmChart resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -219,7 +219,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	chart.Kind = controllerKind.Kind
 	chart.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(chart)
+	err = c.syncHandlerFunc(ctx, chart)
 	if err != nil {
 		c.recorder.Event(chart, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

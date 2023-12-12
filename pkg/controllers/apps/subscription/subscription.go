@@ -44,7 +44,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = appsapi.SchemeGroupVersion.WithKind("Subscription")
 
-type SyncHandlerFunc func(subscription *appsapi.Subscription) error
+type SyncHandlerFunc func(ctx context.Context, subscription *appsapi.Subscription) error
 
 // Controller is a controller that handles Subscription
 type Controller struct {
@@ -77,7 +77,7 @@ func NewController(
 			subsInformer.Informer().HasSynced,
 			baseInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE
 			if oldObj != nil && newObj != nil {
@@ -173,7 +173,7 @@ func (c *Controller) resolveControllerRef(name, namespace string, uid types.UID)
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -202,7 +202,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 	sub := cachedSub.DeepCopy()
 	if !utils.ContainsString(sub.Finalizers, known.AppFinalizer) && sub.DeletionTimestamp == nil {
 		sub.Finalizers = append(sub.Finalizers, known.AppFinalizer)
-		if sub, err = c.clusternetClient.AppsV1alpha1().Subscriptions(sub.Namespace).Update(context.TODO(),
+		if sub, err = c.clusternetClient.AppsV1alpha1().Subscriptions(sub.Namespace).Update(ctx,
 			sub, metav1.UpdateOptions{}); err != nil {
 			msg := fmt.Sprintf("failed to inject finalizer %s to Subscription %s: %v", known.AppFinalizer, klog.KObj(sub), err)
 			klog.WarningDepth(4, msg)
@@ -227,7 +227,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	sub.Kind = controllerKind.Kind
 	sub.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(sub)
+	err = c.syncHandlerFunc(ctx, sub)
 	if err != nil {
 		c.recorder.Event(sub, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

@@ -47,7 +47,7 @@ import (
 var subKind = appsapi.SchemeGroupVersion.WithKind("Subscription")
 
 // SyncHandlerFunc is the function to sync a Subscription object
-type SyncHandlerFunc func(subscription *appsapi.Subscription) error
+type SyncHandlerFunc func(ctx context.Context, subscription *appsapi.Subscription) error
 
 // Controller is a controller that maintains FeedInventory objects
 type Controller struct {
@@ -92,7 +92,7 @@ func NewController(
 			finvInformer.Informer().HasSynced,
 			manifestInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// FeedInventory has the same name with Subscription
 
@@ -169,7 +169,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -206,7 +206,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 	sub.Kind = subKind.Kind
 	sub.APIVersion = subKind.GroupVersion().String()
 	if c.customSyncHandlerFunc != nil {
-		return nil, c.customSyncHandlerFunc(sub)
+		return nil, c.customSyncHandlerFunc(ctx, sub)
 	}
 	return nil, c.handleSubscription(sub)
 }

@@ -39,7 +39,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = clusterapi.SchemeGroupVersion.WithKind("ClusterRegistrationRequest")
 
-type SyncHandlerFunc func(*clusterapi.ClusterRegistrationRequest) error
+type SyncHandlerFunc func(context.Context, *clusterapi.ClusterRegistrationRequest) error
 
 // Controller is a controller that handles edge cluster registration requests
 type Controller struct {
@@ -66,7 +66,7 @@ func NewController(
 		WithCacheSynced(
 			crrsInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: Decide whether discovery has reported a spec change.
 			if oldObj != nil && newObj != nil {
@@ -106,7 +106,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the ClusterRegistrationRequest resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -138,7 +138,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 		crr.APIVersion = controllerKind.Version
 	}
 
-	err = c.syncHandler(crr.DeepCopy())
+	err = c.syncHandler(ctx, crr.DeepCopy())
 	if err == nil {
 		klog.Infof("successfully synced ClusterRegistrationRequest %q", key)
 	}

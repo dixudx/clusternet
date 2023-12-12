@@ -271,7 +271,7 @@ func (deployer *Deployer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (deployer *Deployer) handleSubscription(subCopy *appsapi.Subscription) error {
+func (deployer *Deployer) handleSubscription(ctx context.Context, subCopy *appsapi.Subscription) error {
 	klog.V(5).Infof("handle Subscription %s", klog.KObj(subCopy))
 	if subCopy.DeletionTimestamp != nil {
 		bases, err := deployer.baseController.FindBaseBySubUID(string(subCopy.UID))
@@ -285,7 +285,7 @@ func (deployer *Deployer) handleSubscription(subCopy *appsapi.Subscription) erro
 			if base.DeletionTimestamp != nil {
 				continue
 			}
-			if err = deployer.deleteBase(context.TODO(), klog.KObj(base).String()); err != nil {
+			if err = deployer.deleteBase(ctx, klog.KObj(base).String()); err != nil {
 				klog.ErrorDepth(5, err)
 				allErrs = append(allErrs, err)
 				continue
@@ -301,7 +301,7 @@ func (deployer *Deployer) handleSubscription(subCopy *appsapi.Subscription) erro
 		}
 
 		subCopy.Finalizers = utils.RemoveString(subCopy.Finalizers, known.AppFinalizer)
-		_, err = deployer.clusternetClient.AppsV1alpha1().Subscriptions(subCopy.Namespace).Update(context.TODO(), subCopy, metav1.UpdateOptions{})
+		_, err = deployer.clusternetClient.AppsV1alpha1().Subscriptions(subCopy.Namespace).Update(ctx, subCopy, metav1.UpdateOptions{})
 		if err != nil {
 			klog.WarningDepth(4,
 				fmt.Sprintf("failed to remove finalizer %s from Subscription %s: %v", known.AppFinalizer, klog.KObj(subCopy), err))
@@ -690,7 +690,7 @@ func (deployer *Deployer) deleteLocalization(ctx context.Context, namespacedKey 
 	return err
 }
 
-func (deployer *Deployer) handleBase(baseCopy *appsapi.Base) error {
+func (deployer *Deployer) handleBase(ctx context.Context, baseCopy *appsapi.Base) error {
 	klog.V(5).Infof("handle Base %s", klog.KObj(baseCopy))
 	if baseCopy.DeletionTimestamp != nil {
 		descs, err := deployer.descLister.Descriptions(baseCopy.Namespace).List(labels.SelectorFromSet(labels.Set{
@@ -710,7 +710,7 @@ func (deployer *Deployer) handleBase(baseCopy *appsapi.Base) error {
 				continue
 			}
 
-			if err = deployer.deleteDescription(context.TODO(), klog.KObj(desc).String()); err != nil {
+			if err = deployer.deleteDescription(ctx, klog.KObj(desc).String()); err != nil {
 				klog.ErrorDepth(5, err)
 				allErrs = append(allErrs, err)
 				continue
@@ -721,7 +721,7 @@ func (deployer *Deployer) handleBase(baseCopy *appsapi.Base) error {
 		}
 
 		baseCopy.Finalizers = utils.RemoveString(baseCopy.Finalizers, known.AppFinalizer)
-		_, err = deployer.clusternetClient.AppsV1alpha1().Bases(baseCopy.Namespace).Update(context.TODO(), baseCopy, metav1.UpdateOptions{})
+		_, err = deployer.clusternetClient.AppsV1alpha1().Bases(baseCopy.Namespace).Update(ctx, baseCopy, metav1.UpdateOptions{})
 		if err != nil {
 			klog.WarningDepth(4,
 				fmt.Sprintf("failed to remove finalizer %s from Base %s: %v", known.AppFinalizer, klog.KObj(baseCopy), err))
@@ -981,7 +981,7 @@ func (deployer *Deployer) deleteDescription(ctx context.Context, namespacedKey s
 	return err
 }
 
-func (deployer *Deployer) handleManifest(manifestCopy *appsapi.Manifest) error {
+func (deployer *Deployer) handleManifest(ctx context.Context, manifestCopy *appsapi.Manifest) error {
 	klog.V(5).Infof("handle Manifest %s", klog.KObj(manifestCopy))
 	if manifestCopy.DeletionTimestamp != nil {
 		if err := deployer.protectManifestFeed(manifestCopy); err != nil {
@@ -991,7 +991,7 @@ func (deployer *Deployer) handleManifest(manifestCopy *appsapi.Manifest) error {
 		// remove finalizers
 		manifestCopy.Finalizers = utils.RemoveString(manifestCopy.Finalizers, known.AppFinalizer)
 		manifestCopy.Finalizers = utils.RemoveString(manifestCopy.Finalizers, known.FeedProtectionFinalizer)
-		_, err := deployer.clusternetClient.AppsV1alpha1().Manifests(manifestCopy.Namespace).Update(context.TODO(), manifestCopy, metav1.UpdateOptions{})
+		_, err := deployer.clusternetClient.AppsV1alpha1().Manifests(manifestCopy.Namespace).Update(ctx, manifestCopy, metav1.UpdateOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
@@ -1013,7 +1013,7 @@ func (deployer *Deployer) handleManifest(manifestCopy *appsapi.Manifest) error {
 	return deployer.resyncBase(baseUIDs...)
 }
 
-func (deployer *Deployer) handleHelmChart(chartCopy *appsapi.HelmChart) error {
+func (deployer *Deployer) handleHelmChart(ctx context.Context, chartCopy *appsapi.HelmChart) error {
 	var err error
 	klog.V(5).Infof("handle HelmChart %s", klog.KObj(chartCopy))
 	if chartCopy.DeletionTimestamp != nil {
@@ -1024,7 +1024,7 @@ func (deployer *Deployer) handleHelmChart(chartCopy *appsapi.HelmChart) error {
 		// remove finalizers
 		chartCopy.Finalizers = utils.RemoveString(chartCopy.Finalizers, known.AppFinalizer)
 		chartCopy.Finalizers = utils.RemoveString(chartCopy.Finalizers, known.FeedProtectionFinalizer)
-		_, err = deployer.clusternetClient.AppsV1alpha1().HelmCharts(chartCopy.Namespace).Update(context.TODO(), chartCopy, metav1.UpdateOptions{})
+		_, err = deployer.clusternetClient.AppsV1alpha1().HelmCharts(chartCopy.Namespace).Update(ctx, chartCopy, metav1.UpdateOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil

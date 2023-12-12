@@ -79,7 +79,7 @@ func NewServiceImportController(kubeclient kubernetes.Interface, epsInformer dis
 	// add event handler for ServiceImport
 	yachtcontroller := yacht.NewController("serviceimport").
 		WithCacheSynced(siInformer.Informer().HasSynced, epsInformer.Informer().HasSynced).
-		WithHandlerFunc(sic.Handle).
+		WithHandlerContextFunc(sic.Handle).
 		WithEnqueueFilterFunc(preFilter)
 	_, err := siInformer.Informer().AddEventHandler(yachtcontroller.DefaultResourceEventHandlerFuncs())
 	if err != nil {
@@ -102,8 +102,7 @@ func NewServiceImportController(kubeclient kubernetes.Interface, epsInformer dis
 	return sic, nil
 }
 
-func (c *ServiceImportController) Handle(obj interface{}) (requeueAfter *time.Duration, err error) {
-	ctx := context.Background()
+func (c *ServiceImportController) Handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	key := obj.(string)
 	namespace, siName, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {

@@ -109,7 +109,7 @@ func (c *Controller) Run(ctx context.Context) {
 	// create a yacht controller for cluster discovery
 	controller := yacht.NewController("cluster-discovery").
 		WithWorkers(2).
-		WithHandlerFunc(func(key interface{}) (requeueAfter *time.Duration, err error) {
+		WithHandlerContextFunc(func(ctx context.Context, key interface{}) (requeueAfter *time.Duration, err error) {
 			// Convert the namespace/name string into a distinct namespace and name
 			ns, name, err := cache.SplitMetaNamespaceKey(key.(string))
 			if err != nil {

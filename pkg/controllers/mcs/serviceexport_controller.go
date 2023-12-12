@@ -75,7 +75,7 @@ func NewServiceExportController(epsInformer discoveryinformerv1.EndpointSliceInf
 	// add event handler
 	yachtcontroller := yacht.NewController("serviceexport").
 		WithCacheSynced(seInformer.Informer().HasSynced, epsInformer.Informer().HasSynced).
-		WithHandlerFunc(sec.Handle)
+		WithHandlerContextFunc(sec.Handle)
 	_, err := seInformer.Informer().AddEventHandler(yachtcontroller.DefaultResourceEventHandlerFuncs())
 	if err != nil {
 		return nil, err
@@ -116,8 +116,7 @@ func NewServiceExportController(epsInformer discoveryinformerv1.EndpointSliceInf
 	return sec, nil
 }
 
-func (c *ServiceExportController) Handle(obj interface{}) (requeueAfter *time.Duration, err error) {
-	ctx := context.Background()
+func (c *ServiceExportController) Handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	key := obj.(string)
 	namespace, seName, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {

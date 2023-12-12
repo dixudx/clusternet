@@ -176,7 +176,7 @@ func (deployer *Deployer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (deployer *Deployer) handleDescription(descCopy *appsapi.Description) error {
+func (deployer *Deployer) handleDescription(ctx context.Context, descCopy *appsapi.Description) error {
 	klog.V(5).Infof("handle Description %s", klog.KObj(descCopy))
 	if descCopy.Spec.Deployer != appsapi.DescriptionHelmDeployer {
 		return nil
@@ -200,7 +200,7 @@ func (deployer *Deployer) handleDescription(descCopy *appsapi.Description) error
 				continue
 			}
 
-			if err = deployer.deleteHelmRelease(context.TODO(), klog.KObj(hr).String()); err != nil {
+			if err = deployer.deleteHelmRelease(ctx, klog.KObj(hr).String()); err != nil {
 				klog.ErrorDepth(5, err)
 				allErrs = append(allErrs, err)
 				continue
@@ -212,7 +212,7 @@ func (deployer *Deployer) handleDescription(descCopy *appsapi.Description) error
 		}
 
 		descCopy.Finalizers = utils.RemoveString(descCopy.Finalizers, known.AppFinalizer)
-		_, err = deployer.clusternetClient.AppsV1alpha1().Descriptions(descCopy.Namespace).Update(context.TODO(), descCopy, metav1.UpdateOptions{})
+		_, err = deployer.clusternetClient.AppsV1alpha1().Descriptions(descCopy.Namespace).Update(ctx, descCopy, metav1.UpdateOptions{})
 		if err != nil {
 			klog.WarningDepth(4,
 				fmt.Sprintf("failed to remove finalizer %s from Description %s: %v", known.AppFinalizer, klog.KObj(descCopy), err))
@@ -334,7 +334,7 @@ func (deployer *Deployer) syncHelmRelease(desc *appsapi.Description, helmRelease
 			reflect.DeepEqual(hr.Annotations, helmRelease.Annotations) &&
 			reflect.DeepEqual(hr.Labels, helmRelease.Labels) {
 			// seems to get overrides changed
-			return deployer.handleHelmRelease(hr)
+			return deployer.handleHelmRelease(context.TODO(), hr)
 		}
 
 		// update it
@@ -397,7 +397,7 @@ func (deployer *Deployer) deleteHelmRelease(ctx context.Context, namespacedKey s
 	return err
 }
 
-func (deployer *Deployer) handleHelmRelease(hr *appsapi.HelmRelease) error {
+func (deployer *Deployer) handleHelmRelease(ctx context.Context, hr *appsapi.HelmRelease) error {
 	klog.V(5).Infof("handle HelmRelease %s", klog.KObj(hr))
 
 	if hr.DeletionTimestamp != nil {
@@ -405,7 +405,7 @@ func (deployer *Deployer) handleHelmRelease(hr *appsapi.HelmRelease) error {
 		if utils.IsClusterLost(hr.Labels[known.ClusterIDLabel], hr.Namespace, deployer.clusterLister) {
 			hrCopy := hr.DeepCopy()
 			hrCopy.Finalizers = utils.RemoveString(hrCopy.Finalizers, known.AppFinalizer)
-			_, err := deployer.clusternetClient.AppsV1alpha1().HelmReleases(hrCopy.Namespace).Update(context.TODO(), hrCopy, metav1.UpdateOptions{})
+			_, err := deployer.clusternetClient.AppsV1alpha1().HelmReleases(hrCopy.Namespace).Update(ctx, hrCopy, metav1.UpdateOptions{})
 			return err
 		}
 	}
@@ -425,11 +425,11 @@ func (deployer *Deployer) handleHelmRelease(hr *appsapi.HelmRelease) error {
 	if err != nil {
 		return err
 	}
-	return utils.ReconcileHelmRelease(context.TODO(), deployCtx, deployer.kubeClient, deployer.clusternetClient,
+	return utils.ReconcileHelmRelease(ctx, deployCtx, deployer.kubeClient, deployer.clusternetClient,
 		deployer.hrLister, deployer.descLister, hr, deployer.recorder)
 }
 
-func (deployer *Deployer) handleSecret(secret *corev1.Secret) error {
+func (deployer *Deployer) handleSecret(ctx context.Context, secret *corev1.Secret) error {
 	klog.V(5).Infof("handle Secret %s", klog.KObj(secret))
 	if secret.DeletionTimestamp == nil {
 		return nil
@@ -451,7 +451,7 @@ func (deployer *Deployer) handleSecret(secret *corev1.Secret) error {
 
 	secretCopy := secret.DeepCopy()
 	secretCopy.Finalizers = utils.RemoveString(secretCopy.Finalizers, known.AppFinalizer)
-	_, err = deployer.kubeClient.CoreV1().Secrets(secretCopy.Namespace).Update(context.TODO(), secretCopy, metav1.UpdateOptions{})
+	_, err = deployer.kubeClient.CoreV1().Secrets(secretCopy.Namespace).Update(ctx, secretCopy, metav1.UpdateOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil

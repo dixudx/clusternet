@@ -43,7 +43,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = appsapi.SchemeGroupVersion.WithKind("Manifest")
 
-type SyncHandlerFunc func(manifest *appsapi.Manifest) error
+type SyncHandlerFunc func(ctx context.Context, manifest *appsapi.Manifest) error
 
 // Controller is a controller that handles Manifest
 type Controller struct {
@@ -85,7 +85,7 @@ func NewController(
 			manifestInformer.Informer().HasSynced,
 			baseInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: spec and labels changes
 			if oldObj != nil && newObj != nil {
@@ -170,7 +170,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Manifest resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -212,7 +212,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 		// only update on changed
 		if !reflect.DeepEqual(manifest, updatedManifest) {
-			if manifest, err = c.clusternetClient.AppsV1alpha1().Manifests(updatedManifest.Namespace).Update(context.TODO(),
+			if manifest, err = c.clusternetClient.AppsV1alpha1().Manifests(updatedManifest.Namespace).Update(ctx,
 				updatedManifest, metav1.UpdateOptions{}); err != nil {
 				msg := fmt.Sprintf("failed to inject finalizers to Manifest %s: %v", klog.KObj(manifest), err)
 				klog.WarningDepth(4, msg)
@@ -227,7 +227,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	manifest.Kind = controllerKind.Kind
 	manifest.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(manifest)
+	err = c.syncHandlerFunc(ctx, manifest)
 	if err != nil {
 		c.recorder.Event(manifest, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

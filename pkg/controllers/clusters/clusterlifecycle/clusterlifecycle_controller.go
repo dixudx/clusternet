@@ -129,7 +129,7 @@ func NewController(
 	}
 
 	yachtController := yacht.NewController("cluster-lifecycle").
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: status change
 			if oldObj != nil && newObj != nil {
@@ -195,7 +195,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 	c.yachtController.WithWorkers(workers).Run(ctx)
 }
 
-func (c *Controller) handle(key interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, key interface{}) (requeueAfter *time.Duration, err error) {
 	// Convert the namespace/name string into a distinct namespace and name
 	ns, name, err := cache.SplitMetaNamespaceKey(key.(string))
 	if err != nil {
@@ -219,7 +219,7 @@ func (c *Controller) handle(key interface{}) (requeueAfter *time.Duration, err e
 		return nil, nil
 	}
 
-	updatedMcls, err := c.updateClusterConditions(context.TODO(), mcls.DeepCopy())
+	updatedMcls, err := c.updateClusterConditions(ctx, mcls.DeepCopy())
 	if err != nil {
 		msg := fmt.Sprintf("failed to update conditions of ManagedCluster status: %v", err)
 		klog.WarningDepth(2, msg)
@@ -227,7 +227,7 @@ func (c *Controller) handle(key interface{}) (requeueAfter *time.Duration, err e
 		return nil, err
 	}
 
-	err = c.updateClusterTaintsAndInitBase(context.TODO(), updatedMcls)
+	err = c.updateClusterTaintsAndInitBase(ctx, updatedMcls)
 	if err != nil {
 		return nil, err
 	}

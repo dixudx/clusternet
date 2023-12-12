@@ -46,7 +46,7 @@ var (
 	chartKind      = appsapi.SchemeGroupVersion.WithKind("HelmChart")
 )
 
-type SyncHandlerFunc func(glob *appsapi.Globalization) error
+type SyncHandlerFunc func(ctx context.Context, glob *appsapi.Globalization) error
 
 // Controller is a controller that handles Globalization
 type Controller struct {
@@ -87,7 +87,7 @@ func NewController(
 			chartInformer.Informer().HasSynced,
 			manifestInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: labels and spec changes
 			if oldObj != nil && newObj != nil {
@@ -129,7 +129,7 @@ func (c *Controller) Run(workers int, ctx context.Context) {
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Globalization resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -186,7 +186,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	glob.Kind = controllerKind.Kind
 	glob.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(glob)
+	err = c.syncHandlerFunc(ctx, glob)
 	if err != nil {
 		c.recorder.Event(glob, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {

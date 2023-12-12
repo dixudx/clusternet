@@ -104,7 +104,7 @@ func (deployer *Deployer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (deployer *Deployer) handleHelmRelease(hr *appsapi.HelmRelease) error {
+func (deployer *Deployer) handleHelmRelease(ctx context.Context, hr *appsapi.HelmRelease) error {
 	klog.V(5).Infof("handle HelmRelease %s", klog.KObj(hr))
 
 	if !utils.DeployableByAgent(deployer.syncMode, deployer.appPusherEnabled) {
@@ -113,7 +113,7 @@ func (deployer *Deployer) handleHelmRelease(hr *appsapi.HelmRelease) error {
 	}
 
 	return utils.ReconcileHelmRelease(
-		context.TODO(),
+		ctx,
 		deployer.deployCtx,
 		deployer.parentKubeClient,
 		deployer.clusternetClient,

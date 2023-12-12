@@ -100,8 +100,8 @@ type Localizer struct {
 	locController  *localization.Controller
 	globController *globalization.Controller
 
-	chartCallback    func(*appsapi.HelmChart) error
-	manifestCallback func(*appsapi.Manifest) error
+	chartCallback    func(context.Context, *appsapi.HelmChart) error
+	manifestCallback func(context.Context, *appsapi.Manifest) error
 
 	recorder record.EventRecorder
 
@@ -109,10 +109,14 @@ type Localizer struct {
 	reservedNamespace string
 }
 
-func NewLocalizer(clusternetClient *clusternetclientset.Clientset,
+func NewLocalizer(
+	clusternetClient *clusternetclientset.Clientset,
 	clusternetInformerFactory clusternetinformers.SharedInformerFactory,
-	chartCallback func(*appsapi.HelmChart) error, manifestCallback func(*appsapi.Manifest) error,
-	recorder record.EventRecorder, reservedNamespace string) (*Localizer, error) {
+	chartCallback func(context.Context, *appsapi.HelmChart) error,
+	manifestCallback func(context.Context, *appsapi.Manifest) error,
+	recorder record.EventRecorder,
+	reservedNamespace string,
+) (*Localizer, error) {
 
 	localizer := &Localizer{
 		clusternetClient:  clusternetClient,
@@ -180,7 +184,7 @@ func (l *Localizer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (l *Localizer) handleLocalization(locCopy *appsapi.Localization) error {
+func (l *Localizer) handleLocalization(ctx context.Context, locCopy *appsapi.Localization) error {
 	switch locCopy.Spec.OverridePolicy {
 	case appsapi.ApplyNow:
 		klog.V(5).Infof("apply Localization %s now", klog.KObj(locCopy))
@@ -194,7 +198,7 @@ func (l *Localizer) handleLocalization(locCopy *appsapi.Localization) error {
 				return err
 			}
 
-			err = l.chartCallback(chart)
+			err = l.chartCallback(ctx, chart)
 			if err != nil {
 				return err
 			}
@@ -208,7 +212,7 @@ func (l *Localizer) handleLocalization(locCopy *appsapi.Localization) error {
 			klog.V(5).Infof("skipping apply Localization %s to not found %s", klog.KObj(locCopy), utils.FormatFeed(locCopy.Spec.Feed))
 			break
 		}
-		err = l.manifestCallback(manifests[0])
+		err = l.manifestCallback(ctx, manifests[0])
 		if err != nil {
 			return err
 		}
@@ -225,7 +229,7 @@ func (l *Localizer) handleLocalization(locCopy *appsapi.Localization) error {
 	if locCopy.DeletionTimestamp != nil {
 		// remove finalizer
 		locCopy.Finalizers = utils.RemoveString(locCopy.Finalizers, known.AppFinalizer)
-		_, err := l.clusternetClient.AppsV1alpha1().Localizations(locCopy.Namespace).Update(context.TODO(), locCopy, metav1.UpdateOptions{})
+		_, err := l.clusternetClient.AppsV1alpha1().Localizations(locCopy.Namespace).Update(ctx, locCopy, metav1.UpdateOptions{})
 		if err != nil {
 			klog.WarningDepth(4,
 				fmt.Sprintf("failed to remove finalizer %s from Localization %s: %v", known.AppFinalizer, klog.KObj(locCopy), err))
@@ -235,7 +239,7 @@ func (l *Localizer) handleLocalization(locCopy *appsapi.Localization) error {
 	return nil
 }
 
-func (l *Localizer) handleGlobalization(globCopy *appsapi.Globalization) error {
+func (l *Localizer) handleGlobalization(ctx context.Context, globCopy *appsapi.Globalization) error {
 	switch globCopy.Spec.OverridePolicy {
 	case appsapi.ApplyNow:
 		klog.V(5).Infof("apply Globalization %s now", klog.KObj(globCopy), appsapi.ApplyNow)
@@ -249,7 +253,7 @@ func (l *Localizer) handleGlobalization(globCopy *appsapi.Globalization) error {
 				return err
 			}
 
-			err = l.chartCallback(chart)
+			err = l.chartCallback(ctx, chart)
 			if err != nil {
 				return err
 			}
@@ -263,7 +267,7 @@ func (l *Localizer) handleGlobalization(globCopy *appsapi.Globalization) error {
 			klog.V(5).Infof("skipping apply Globalization %s to not found %s", klog.KObj(globCopy), utils.FormatFeed(globCopy.Spec.Feed))
 			break
 		}
-		err = l.manifestCallback(manifests[0])
+		err = l.manifestCallback(ctx, manifests[0])
 		if err != nil {
 			return err
 		}
@@ -279,7 +283,7 @@ func (l *Localizer) handleGlobalization(globCopy *appsapi.Globalization) error {
 	if globCopy.DeletionTimestamp != nil {
 		// remove finalizer
 		globCopy.Finalizers = utils.RemoveString(globCopy.Finalizers, known.AppFinalizer)
-		_, err := l.clusternetClient.AppsV1alpha1().Globalizations().Update(context.TODO(), globCopy, metav1.UpdateOptions{})
+		_, err := l.clusternetClient.AppsV1alpha1().Globalizations().Update(ctx, globCopy, metav1.UpdateOptions{})
 		if err != nil {
 			klog.WarningDepth(4,
 				fmt.Sprintf("failed to remove finalizer %s from Globalization %s: %v", known.AppFinalizer, klog.KObj(globCopy), err))

@@ -125,7 +125,7 @@ func (deployer *Deployer) Run(workers int, ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (deployer *Deployer) handleDescription(desc *appsapi.Description) error {
+func (deployer *Deployer) handleDescription(ctx context.Context, desc *appsapi.Description) error {
 	klog.V(5).Infof("handle Description %s", klog.KObj(desc))
 	if desc.Spec.Deployer != appsapi.DescriptionGenericDeployer {
 		return nil
@@ -133,16 +133,16 @@ func (deployer *Deployer) handleDescription(desc *appsapi.Description) error {
 
 	if !utils.DeployableByAgent(deployer.syncMode, deployer.appPusherEnabled) {
 		klog.V(5).Infof("Description %s is not deployable by agent, skipping syncing", klog.KObj(desc))
-		return utils.ApplyDescription(context.TODO(), deployer.clusternetClient, deployer.dynamicClient,
+		return utils.ApplyDescription(ctx, deployer.clusternetClient, deployer.dynamicClient,
 			deployer.discoveryRESTMapper, desc, deployer.recorder, true, deployer.ResourceCallbackHandler, false)
 	}
 
 	if desc.DeletionTimestamp != nil {
-		return utils.OffloadDescription(context.TODO(), deployer.clusternetClient, deployer.dynamicClient,
+		return utils.OffloadDescription(ctx, deployer.clusternetClient, deployer.dynamicClient,
 			deployer.discoveryRESTMapper, desc, deployer.recorder)
 	}
 
-	return utils.ApplyDescription(context.TODO(), deployer.clusternetClient, deployer.dynamicClient,
+	return utils.ApplyDescription(ctx, deployer.clusternetClient, deployer.dynamicClient,
 		deployer.discoveryRESTMapper, desc, deployer.recorder, false, deployer.ResourceCallbackHandler, false)
 }
 

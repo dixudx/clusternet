@@ -44,7 +44,7 @@ import (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = appsapi.SchemeGroupVersion.WithKind("Description")
 
-type SyncHandlerFunc func(description *appsapi.Description) error
+type SyncHandlerFunc func(ctx context.Context, description *appsapi.Description) error
 
 // Controller is a controller that handles Description
 type Controller struct {
@@ -77,7 +77,7 @@ func NewController(
 			hrInformer.Informer().HasSynced,
 			helmChartInformer.Informer().HasSynced,
 		).
-		WithHandlerFunc(c.handle).
+		WithHandlerContextFunc(c.handle).
 		WithEnqueueFilterFunc(func(oldObj, newObj interface{}) (bool, error) {
 			// UPDATE: spec changes
 			if oldObj != nil && newObj != nil {
@@ -214,7 +214,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 // handle compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Description resource
 // with the current status of the resource.
-func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err error) {
+func (c *Controller) handle(ctx context.Context, obj interface{}) (requeueAfter *time.Duration, err error) {
 	// If an error occurs during handling, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
 	// temporary network failure, or any other transient reason.
@@ -258,7 +258,7 @@ func (c *Controller) handle(obj interface{}) (requeueAfter *time.Duration, err e
 
 	desc.Kind = controllerKind.Kind
 	desc.APIVersion = controllerKind.GroupVersion().String()
-	err = c.syncHandlerFunc(desc)
+	err = c.syncHandlerFunc(ctx, desc)
 	if err != nil {
 		c.recorder.Event(desc, corev1.EventTypeWarning, "FailedSynced", err.Error())
 	} else {
