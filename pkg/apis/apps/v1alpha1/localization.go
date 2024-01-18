@@ -61,6 +61,11 @@ type LocalizationSpec struct {
 	// +kubebuilder:default=500
 	Priority int32 `json:"priority,omitempty"`
 
+	// Privileged indicates this Localization has the privilege than other same-priority ones.
+	//
+	// +optional
+	Privileged bool `json:"privileged,omitempty"`
+
 	// Feed holds references to the objects the Localization applies to.
 	//
 	// +optional

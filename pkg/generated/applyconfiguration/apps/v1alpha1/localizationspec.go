@@ -27,6 +27,7 @@ type LocalizationSpecApplyConfiguration struct {
 	OverridePolicy          *v1alpha1.OverridePolicy           `json:"overridePolicy,omitempty"`
 	Overrides               []OverrideConfigApplyConfiguration `json:"overrides,omitempty"`
 	Priority                *int32                             `json:"priority,omitempty"`
+	Privileged              *bool                              `json:"privileged,omitempty"`
 	*FeedApplyConfiguration `json:"feed,omitempty"`
 }
 
@@ -62,6 +63,14 @@ func (b *LocalizationSpecApplyConfiguration) WithOverrides(values ...*OverrideCo
 // If called multiple times, the Priority field is set to the value of the last call.
 func (b *LocalizationSpecApplyConfiguration) WithPriority(value int32) *LocalizationSpecApplyConfiguration {
 	b.Priority = &value
+	return b
+}
+
+// WithPrivileged sets the Privileged field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Privileged field is set to the value of the last call.
+func (b *LocalizationSpecApplyConfiguration) WithPrivileged(value bool) *LocalizationSpecApplyConfiguration {
+	b.Privileged = &value
 	return b
 }
 

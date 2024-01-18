@@ -429,11 +429,7 @@ func (l *Localizer) getOverrides(namespace string, feed appsapi.Feed) ([]appsapi
 		return nil, err
 	}
 	sort.SliceStable(locs, func(i, j int) bool {
-		if locs[i].Spec.Priority == locs[j].Spec.Priority {
-			return locs[i].CreationTimestamp.Second() < locs[j].CreationTimestamp.Second()
-		}
-
-		return locs[i].Spec.Priority < locs[j].Spec.Priority
+		return compareLocalizationPriority(locs[i], locs[j])
 	})
 
 	var allOverrideConfigs []appsapi.OverrideConfig
@@ -451,4 +447,16 @@ func (l *Localizer) getOverrides(namespace string, feed appsapi.Feed) ([]appsapi
 	}
 
 	return allOverrideConfigs, nil
+}
+
+func compareLocalizationPriority(i, j *appsapi.Localization) bool {
+	if i.Spec.Priority == j.Spec.Priority {
+		if i.Spec.Privileged != j.Spec.Privileged {
+			return j.Spec.Privileged
+		}
+
+		return i.CreationTimestamp.Second() < j.CreationTimestamp.Second()
+	}
+
+	return i.Spec.Priority < j.Spec.Priority
 }
