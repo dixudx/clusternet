@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	"helm.sh/helm/v3/pkg/chartutil"
+	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
 	"sigs.k8s.io/yaml"
 
 	appsapi "github.com/clusternet/clusternet/pkg/apis/apps/v1alpha1"

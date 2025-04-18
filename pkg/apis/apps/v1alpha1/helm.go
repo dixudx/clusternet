@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"helm.sh/helm/v3/pkg/release"
+	release "helm.sh/helm/v4/pkg/release/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

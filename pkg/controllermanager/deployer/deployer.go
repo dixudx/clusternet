@@ -25,9 +25,9 @@ import (
 	"strings"
 	"sync"
 
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/registry"
-	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/registry"
+	"helm.sh/helm/v4/pkg/repo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
