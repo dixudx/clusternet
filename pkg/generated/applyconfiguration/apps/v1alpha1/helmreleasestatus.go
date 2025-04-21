@@ -18,21 +18,21 @@ limitations under the License.
 package v1alpha1
 
 import (
-	release "helm.sh/helm/v4/pkg/release/v1"
+	v1 "helm.sh/helm/v4/pkg/release/v1"
 )
 
-// HelmReleaseStatusApplyConfiguration represents an declarative configuration of the HelmReleaseStatus type for use
+// HelmReleaseStatusApplyConfiguration represents a declarative configuration of the HelmReleaseStatus type for use
 // with apply.
 type HelmReleaseStatusApplyConfiguration struct {
-	FirstDeployed *string         `json:"firstDeployed,omitempty"`
-	LastDeployed  *string         `json:"lastDeployed,omitempty"`
-	Description   *string         `json:"description,omitempty"`
-	Phase         *release.Status `json:"phase,omitempty"`
-	Notes         *string         `json:"notes,omitempty"`
-	Version       *int            `json:"version,omitempty"`
+	FirstDeployed *string    `json:"firstDeployed,omitempty"`
+	LastDeployed  *string    `json:"lastDeployed,omitempty"`
+	Description   *string    `json:"description,omitempty"`
+	Phase         *v1.Status `json:"phase,omitempty"`
+	Notes         *string    `json:"notes,omitempty"`
+	Version       *int       `json:"version,omitempty"`
 }
 
-// HelmReleaseStatusApplyConfiguration constructs an declarative configuration of the HelmReleaseStatus type for use with
+// HelmReleaseStatusApplyConfiguration constructs a declarative configuration of the HelmReleaseStatus type for use with
 // apply.
 func HelmReleaseStatus() *HelmReleaseStatusApplyConfiguration {
 	return &HelmReleaseStatusApplyConfiguration{}
@@ -65,7 +65,7 @@ func (b *HelmReleaseStatusApplyConfiguration) WithDescription(value string) *Hel
 // WithPhase sets the Phase field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Phase field is set to the value of the last call.
-func (b *HelmReleaseStatusApplyConfiguration) WithPhase(value release.Status) *HelmReleaseStatusApplyConfiguration {
+func (b *HelmReleaseStatusApplyConfiguration) WithPhase(value v1.Status) *HelmReleaseStatusApplyConfiguration {
 	b.Phase = &value
 	return b
 }
